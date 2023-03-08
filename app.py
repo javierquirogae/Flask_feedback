@@ -25,30 +25,43 @@ def home_page():
 
 @app.route('/users/<username>', methods=['GET'])
 def show_user_details(username):
-    if "username" not in session:
+    if username == session['username']:
+        user = User.query.get_or_404(username)
+        feedback = Feedback.query.all()
+        return render_template("details.html", user=user, all_feedback=feedback)
+    else:
         flash("Please login first!", "danger")
-        return redirect('/')
-    user = User.query.get_or_404(username)
-    return render_template("details.html", user=user)
+        return redirect('/login')
+    
 
+# id - a unique primary key that is an auto incrementing integer
+# title - a not-nullable column that is at most 100 characters
+# content - a not-nullable column that is text
+# username - a foreign key that references the username column in the users table
 
+@app.route('/users/<username>/feedback/add', methods=['GET'])
+def show_feedback_form(username):
+    if username != session['username']:
+        flash("Please login first!", "danger")
+        return redirect('/login')
+    form = FeedbackForm()
+    return render_template("feedback.html", form=form)
 
-# @app.route('/tweets', methods=['POST'])
-# def tweet():
-#     if "user_id" not in session:
-#         flash("Please login first!", "danger")
-#         return redirect('/')
-#     form = TweetForm()
-#     text = form.text.data
-#     new_tweet = Tweet(text=text, user_id=session['user_id'])
-#     db.session.add(new_tweet)
-#     db.session.commit()
-#     flash('Twich Created!', 'success')
-#     return redirect('/tweets')
+@app.route('/users/<username>/feedback/add', methods=['POST'])
+def get_feedback(username):
+    if username != session['username']:
+        flash("Please login first!", "danger")
+        return redirect('/login')
+    form = FeedbackForm()
+    title = form.title.data
+    content = form.content.data
+    new_feeback = Feedback(title=title, content=content, username=username)
+    db.session.add(new_feeback)
+    db.session.commit()
+    flash('Feedback Created!', 'success')
+    return redirect(f'/users/{username}')
 
   
-
-
 
 
 # @app.route('/tweets/<int:id>', methods=["POST"])
@@ -127,7 +140,7 @@ def login_user():
 
 
 
-@app.route('/logout')
+@app.route('/logout', methods=['GET'])
 def logout_user():
     user = User.query.get_or_404(session['username'])
     session.pop('username')
@@ -135,17 +148,19 @@ def logout_user():
     return redirect('/login')
 
 
-# @app.route('/api/users/<int:id>', methods=["DELETE"])
-# def delete_user(id):
-#     """Deletes a particular user"""
-#     user = User.query.get_or_404(id)
-#     if Tweet.query.filter_by(user_id = id) is not None:
-#         tweets = Tweet.query.filter_by(user_id = id).all()
-#         for tweet in tweets:
-#             db.session.delete(tweet)
-#     db.session.delete(user)
-#     db.session.commit()
-#     return jsonify(message="deleted")
+@app.route('/users/<username>/delete', methods=["POST"])
+def delete_user(username):
+    """Deletes a particular user"""
+    if username == session['username']:
+        user = User.query.get_or_404(username)
+        if Feedback.query.filter_by(username = username) is not None:
+            all_feedback = Feedback.query.filter_by(username = username).all()
+            for feedback in all_feedback:
+                db.session.delete(feedback)
+        db.session.delete(user)
+        db.session.commit()
+        flash(F"{user.username} deleted!", "info")
+    return redirect('/')
 
 
 # @app.route('/api/tweets/<int:id>', methods=["DELETE"])
