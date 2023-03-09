@@ -12,17 +12,22 @@
     {% for feedback in all_feedback %}
         {% if feedback.username == user.username%}
    
-            <p><h4><b>{{feedback.title}}</b></h4></p>
+            <a href="/feedback/{{feedback.id}}/update"><h4><b>{{feedback.title}}</b></h4></a>
+            <form style="display:inline;" action="/feedback/{{feedback.id}}/delete" method="POST">
+                <button class="btn btn-sm btn-danger"><i class="fas fa-trash"></i></button>
+            </form>
             <p>{{feedback.content}}</p>
     
         {% endif %}
     {% endfor %}
     </div>
-    <form action="/users/{{user.username}}/delete" method="POST">
-
-        <button>Delete account</button>
-    </form>
+    
     
 </div>
+<footer>
+<form action="/users/{{user.username}}/delete" method="POST">
 
+    <button class="btn btn-danger">Delete account</button>
+</form>
+</footer>
 {% endblock %}

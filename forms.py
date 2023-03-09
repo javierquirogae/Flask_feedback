@@ -27,3 +27,6 @@ class UserLogin(FlaskForm):
 class FeedbackForm(FlaskForm):
     title = StringField("Title", validators=[InputRequired()])
     content = StringField("Feedback", validators=[InputRequired()])
+
+
+

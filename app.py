@@ -3,6 +3,7 @@ from flask_debugtoolbar import DebugToolbarExtension
 from models import connect_db, db, User, Feedback
 from forms import UserRegistration, UserLogin, FeedbackForm
 from sqlalchemy.exc import IntegrityError
+from werkzeug.exceptions import Unauthorized
 
 app = Flask(__name__)
 app.config["SQLALCHEMY_DATABASE_URI"] = "postgresql:///feedback"
@@ -19,7 +20,7 @@ toolbar = DebugToolbarExtension(app)
 
 @app.route('/')
 def home_page():
-    return redirect('/register')
+    return redirect('/login')
  
 
 
@@ -34,10 +35,6 @@ def show_user_details(username):
         return redirect('/login')
     
 
-# id - a unique primary key that is an auto incrementing integer
-# title - a not-nullable column that is at most 100 characters
-# content - a not-nullable column that is text
-# username - a foreign key that references the username column in the users table
 
 @app.route('/users/<username>/feedback/add', methods=['GET'])
 def show_feedback_form(username):
@@ -63,23 +60,6 @@ def get_feedback(username):
 
   
 
-
-# @app.route('/tweets/<int:id>', methods=["POST"])
-# def delete_tweet(id):
-#     """Delete tweet"""
-#     if 'user_id' not in session:
-#         flash("Please login first!", "danger")
-#         return redirect('/login')
-#     tweet = Tweet.query.get_or_404(id)
-#     if tweet.user_id == session['user_id']:
-#         db.session.delete(tweet)
-#         db.session.commit()
-#         flash("Twich deleted!", "info")
-#         return redirect('/tweets')
-#     flash("You don't have permission to do that!", "danger")
-#     return redirect('/tweets')
-
-
 @app.route('/register', methods=['GET'])
 def display_register_user():
     form = UserRegistration()
@@ -89,11 +69,6 @@ def display_register_user():
 @app.route('/register', methods=['POST'])
 def process_register_user():
     form = UserRegistration()
-    # username - a unique primary key that is no longer than 20 characters.
-    # password - a not-nullable column that is text
-    # email - a not-nullable column that is unique and no longer than 50 characters.
-    # first_name - a not-nullable column that is no longer than 30 characters.
-    # last_name - a not-nullable column that is no longer than 30 characters.
     username = form.username.data
     password = form.password.data
     email = form.email.data
@@ -134,7 +109,7 @@ def login_user():
         return redirect(f'/users/{username}')
     else:
         flash("Invalid login!", "danger")
-        return redirect('login.html')
+        return redirect('/login')
 
 
 
@@ -163,12 +138,41 @@ def delete_user(username):
     return redirect('/')
 
 
-# @app.route('/api/tweets/<int:id>', methods=["DELETE"])
-# def delete_tweet_via_api(id):
-#     """Deletes a particular tweet"""
-#     tweet = Tweet.query.get_or_404(id)
-#     print('-'*100)
-#     print(id)
-#     db.session.delete(tweet)
-#     db.session.commit()
-#     return jsonify(message="deleted")
+
+
+
+@app.route("/feedback/<feedback_id>/update", methods=["GET"])
+def edit_feedback_form(feedback_id):
+    """show edit feedback form"""
+    feedback = Feedback.query.get_or_404(feedback_id)
+    username = feedback.username
+    if username == session['username']:
+        form = FeedbackForm(obj=feedback)
+        return render_template("edit_feedback.html", feedback=feedback, form=form)
+    else:
+        return redirect(f'/users/{username}')
+    
+
+
+
+@app.route('/feedback/<feedback_id>/update', methods=["POST"])
+def edit_feedback(feedback_id):
+    feedback = Feedback.query.get_or_404(feedback_id)
+    form = FeedbackForm(obj=feedback)
+    feedback.title = form.title.data
+    feedback.content = form.content.data
+    db.session.commit()
+    return redirect(f"/users/{feedback.username}")
+
+
+
+@app.route("/feedback/<int:feedback_id>/delete", methods=["POST"])
+def delete_feedback(feedback_id):
+    """Delete feedback."""
+
+    feedback = Feedback.query.get(feedback_id)
+    if feedback.username == session['username']:
+        db.session.delete(feedback)
+        db.session.commit()
+
+    return redirect(f"/users/{feedback.username}")
